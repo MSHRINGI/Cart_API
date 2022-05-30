@@ -13,7 +13,10 @@ let checkQuantity = function (productQuantity, cartQuantity) {
 // for rendering the list of cart products
 module.exports.list = async function (req, res) {
   try {
-    let cartList = await Cart.find({}).populate("product");
+    let cartList = await Cart.find({}, "product quantity").populate(
+      "product",
+      "product_name product_image description quantity unit_price"
+    );
     return res.status(200).json({
       data: {
         message: "Here is the list of all the products in cart",
@@ -51,29 +54,46 @@ module.exports.add = async function (req, res) {
       });
     } else {
       let product = await Product.findById(req.params.productId);
-      let isQuantityValid = checkQuantity(product.quantity, req.body.quantity);
-      if (isQuantityValid) {
-        cartItem = await Cart.create({
-          product: req.params.productId,
-          quantity: req.body.quantity,
-        });
-      } else {
-        console.log(
-          "Quantity exceeded!! Please choose the quantity that much available only"
-        );
-        return res.status(400).json({
+      if (!product) {
+        return res.status(404).json({
           data: {
-            message:
-              "Quantity exceeded!! Please choose the quantity that much available only",
+            message: "Product not found, Invailid Product ID",
           },
         });
+      } else {
+        let isQuantityValid = checkQuantity(
+          product.quantity,
+          req.body.quantity
+        );
+        if (isQuantityValid) {
+          cartItem = await Cart.create({
+            product: req.params.productId,
+            quantity: req.body.quantity,
+          });
+        } else {
+          console.log(
+            "Quantity exceeded!! Please choose the quantity that much available only"
+          );
+          return res.status(400).json({
+            data: {
+              message:
+                "Quantity exceeded!! Please choose the quantity that much available only",
+            },
+          });
+        }
       }
     }
-    await cartItem.populate("product");
+    await cartItem.populate(
+      "product",
+      "product_name product_image description quantity unit_price"
+    );
     return res.status(200).json({
       data: {
         message: "Product added successfully to the cart",
-        cartItem: cartItem,
+        cartItem: {
+          product: cartItem.product,
+          quantity: cartItem.quantity,
+        },
       },
     });
   } catch (err) {
@@ -97,7 +117,13 @@ module.exports.update = async function (req, res) {
         },
       });
     }
-    let cartItem = await Cart.findById(req.params.cartId).populate("product");
+    let cartItem = await Cart.findById(
+      req.params.cartId,
+      "product quantity"
+    ).populate(
+      "product",
+      "product_name product_image description quantity unit_price"
+    );
     if (!cartItem) {
       console.log("Product not found in the Cart");
       return res.status(400).json({

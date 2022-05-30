@@ -3,7 +3,10 @@ const Product = require("../models/product");
 // for fetching the list of all the product created
 module.exports.productsList = async function (req, res) {
   try {
-    let products = await Product.find({});
+    let products = await Product.find(
+      {},
+      "product_name product_image description quantity unit_price"
+    );
     return res.status(200).json({
       data: {
         message: "List of all the products available",
@@ -66,13 +69,19 @@ module.exports.addProduct = async function (req, res) {
       product.unit_price = req.body.unit_price;
       product.product_image = req.file.path;
 
-      product.save().then((result) => {
-        return res.status(200).json({
-          data: {
-            message: "Product added successfully",
-            product: product,
+      product.save();
+      return res.status(200).json({
+        data: {
+          message: "Product added successfully",
+          product: {
+            id: product._id,
+            product_name: product.product_name,
+            product_image: product.product_image,
+            description: product.description,
+            quantity: product.quantity,
+            unit_price: product.unit_price,
           },
-        });
+        },
       });
     });
   } catch (err) {
